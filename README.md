@@ -1,1 +1,1 @@
-# it should use just for a test;2C
+# it should use only for test
