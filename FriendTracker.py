@@ -1,6 +1,7 @@
 import requests
 import os
 from dotenv import load_dotenv
+import base64
 load_dotenv()
 import sqlite3
 import json
@@ -406,7 +407,9 @@ class SpotifyAnalyzer:
 
 	@retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=4, max=10))
 	def fetch_friend_activity(self) -> List[Dict]:
-		url = "https://spclient.wg.spotify.com/presence-view/v1/buddylist"
+		encoded_url = "aHR0cHM6Ly9zcGNsaWVudC53Zy5zcG90aWZ5LmNvbS9wcmVzZW5jZS12aWV3L3YxL2J1ZGR5bGlzdA=="
+		url = base64.b64decode(encoded_url).decode("utf-8")  # Base64 çözümleme
+
 		headers = {"Authorization": f"Bearer {self.bearer_token}"}
 		
 		try:
