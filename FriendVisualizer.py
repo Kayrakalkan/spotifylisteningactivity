@@ -10,10 +10,18 @@ class SpotifyVisualizer:
         self.analyzer = analyzer
         
     def create_activity_heatmap(self) -> go.Figure:
-        """Create an activity heatmap showing listening patterns by hour"""
+        """Create a stacked bar chart showing listening patterns by hour"""
         df = self.analyzer.get_hourly_activity_heatmap()
-        
-        # Create an empty figure if no data
+
+        if not pd.api.types.is_integer_dtype(df['hour']):
+            df['hour'] = pd.to_numeric(df['hour'], errors='coerce')  
+            df = df.dropna(subset=['hour']) 
+            df['hour'] = df['hour'].astype(int)  
+
+        df['hour'] = (df['hour'] + 3) % 24  
+
+        df = df[df['hour'].between(0, 23)]
+
         if df.empty:
             fig = go.Figure()
             fig.update_layout(
@@ -27,30 +35,33 @@ class SpotifyVisualizer:
                 }]
             )
             return fig
-        
-        # Pivot the data for the heatmap
-        heatmap_data = df.pivot(
-            index='user_name',
-            columns='hour',
-            values='activity_count'
-        ).fillna(0)
 
-        fig = go.Figure(data=go.Heatmap(
-            z=heatmap_data.values,
-            x=heatmap_data.columns,
-            y=heatmap_data.index,
-            colorscale='Viridis'
-        ))
+        # Veriyi saat bazında gruplandır ve eksik saatleri tamamla
+        df_grouped = df.groupby(['hour', 'user_name'])['activity_count'].sum().unstack(fill_value=0)
+        all_hours = pd.Series(range(24), name='hour')
+        df_grouped = df_grouped.reindex(all_hours, fill_value=0)
+
+        # Create the bar chart
+        fig = go.Figure()
+        for user in df_grouped.columns:
+            fig.add_trace(go.Bar(
+                x=df_grouped.index,
+                y=df_grouped[user],
+                name=user
+            ))
 
         fig.update_layout(
             title='Hourly Listening Activity by User',
+            barmode='stack',  
             xaxis_title='Hour of Day',
-            yaxis_title='User',
-            height=400
+            yaxis_title='Activity Count',
+            height=400,
         )
         return fig
 
-    def create_recent_trends_dashboard(self, minutes: int = 10) -> go.Figure:
+
+
+    def create_recent_trends_dashboard(self, minutes: int = 60) -> go.Figure:
         """Create a dashboard of recent listening trends"""
         df = self.analyzer.analyze_recent_activity(minutes)
         

@@ -9,9 +9,16 @@ import time
 import webbrowser
 from http.server import HTTPServer, SimpleHTTPRequestHandler
 from jinja2 import Template
+from tokengenerate import spotify_get_access_token, update_bearer_token
+from cookie import sp_dc
 
 # Load environment variables
 load_dotenv()
+
+# new_token = spotify_get_access_token(sp_dc)
+# update_bearer_token(new_token)
+    
+# load_dotenv()
 
 def setup_logging():
     """Configure logging for the application"""
@@ -96,7 +103,7 @@ def create_user_dashboard(analyzer, visualizer, user_uri: str) -> None:
         f.write(template.render(
             heatmap=heatmap.to_json(),
             trends=trends.to_json()
-        ))
+        ))       
 
 def cleanup_connections(analyzer):
     """Clean up database connections"""

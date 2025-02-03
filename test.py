@@ -23,6 +23,4 @@ print("Users:", users)
 # Get all data from the listening_activity table
 cursor.execute("SELECT * FROM listening_activity;")
 activities = cursor.fetchall()
-print("Listening Activities:", activities)
-
 conn.close()

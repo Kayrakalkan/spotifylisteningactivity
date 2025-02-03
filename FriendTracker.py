@@ -385,7 +385,7 @@ class SpotifyAnalyzer:
 			
 			return pd.read_sql_query(full_query, conn, params=params)
 
-	def run_collection_loop(self, interval_seconds: int = 60):
+	def run_collection_loop(self, interval_seconds: int = 180):
 		"""Run continuous data collection loop"""
 		self.logger.info("Starting data collection loop...")
 		while True:
@@ -405,19 +405,29 @@ class SpotifyAnalyzer:
 				self.logger.error(f"Error in collection loop: {e}")
 				time.sleep(interval_seconds)
 
+	def filter_active_friends(self, friend_activity, active_threshold_seconds=300):
+		"""Filter only active friends based on the timestamp."""
+		current_time = time.time()
+		active_friends = []
+
+		for friend in friend_activity.get("friends", []):
+			timestamp = friend.get("timestamp", 0) / 1000  # Convert to seconds
+			if current_time - timestamp <= active_threshold_seconds:
+				active_friends.append(friend)
+
+		return active_friends
 	@retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=4, max=10))
 	def fetch_friend_activity(self) -> List[Dict]:
 		encoded_url = "aHR0cHM6Ly9zcGNsaWVudC53Zy5zcG90aWZ5LmNvbS9wcmVzZW5jZS12aWV3L3YxL2J1ZGR5bGlzdA=="
-		url = base64.b64decode(encoded_url).decode("utf-8")  # Base64 çözümleme
-
+		url = base64.b64decode(encoded_url).decode("utf-8")  # Base64 çözümleme		
 		headers = {"Authorization": f"Bearer {self.bearer_token}"}
-		
 		try:
+			
 			response = requests.get(url, headers=headers)
 			response.raise_for_status()
 			data = response.json()
 			# self.logger.info(f"API Response: {json.dumps(data, indent=2)}")  # Log the response
-			return data.get("friends", [])
+			return self.filter_active_friends(data)
 		except requests.exceptions.RequestException as e:
 			self.logger.error(f"Error fetching friend activity: {e}")
 			return []
